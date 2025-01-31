@@ -21,6 +21,15 @@ Clarinet.test({
     
     block.receipts[0].result.expectOk();
     
+    // Try creating duplicate profile
+    let duplicateBlock = chain.mineBlock([
+      Tx.contractCall('fit-forge', 'create-profile', [
+        types.utf8(goals)
+      ], wallet1.address)
+    ]);
+    
+    duplicateBlock.receipts[0].result.expectErr(409);
+    
     let getUserBlock = chain.mineBlock([
       Tx.contractCall('fit-forge', 'get-user-data', [
         types.principal(wallet1.address)
@@ -38,7 +47,7 @@ Clarinet.test({
 });
 
 Clarinet.test({
-  name: "Can track workout streaks",
+  name: "Can track workout streaks and level progression",
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const wallet1 = accounts.get('wallet_1')!;
     
@@ -49,8 +58,8 @@ Clarinet.test({
       ], wallet1.address)
     ]);
     
-    // Log consecutive workouts
-    for(let i = 0; i < 7; i++) {
+    // Log 12 consecutive workouts
+    for(let i = 0; i < 12; i++) {
       let workoutBlock = chain.mineBlock([
         Tx.contractCall('fit-forge', 'log-workout', [
           types.utf8("Daily Workout"),
@@ -61,7 +70,7 @@ Clarinet.test({
       workoutBlock.receipts[0].result.expectOk();
     }
     
-    // Verify streak
+    // Verify streak and level
     let getUserBlock = chain.mineBlock([
       Tx.contractCall('fit-forge', 'get-user-data', [
         types.principal(wallet1.address)
@@ -69,9 +78,10 @@ Clarinet.test({
     ]);
     
     const userData = getUserBlock.receipts[0].result.expectOk().expectTuple();
-    assertEquals(userData['current-streak'], '7');
+    assertEquals(userData['current-streak'], '12');
+    assertEquals(userData.level, '2');
     
-    // Check for streak achievement
+    // Check for achievements
     let achievementBlock = chain.mineBlock([
       Tx.contractCall('fit-forge', 'get-achievements', [
         types.principal(wallet1.address)
@@ -80,5 +90,7 @@ Clarinet.test({
     
     const achievements = achievementBlock.receipts[0].result.expectOk().expectTuple();
     assertEquals(achievements.milestones.indexOf("7 Day Streak Achievement!") !== -1, true);
+    assertEquals(achievements.milestones.indexOf("Completed 10 workouts!") !== -1, true);
+    assertEquals(achievements.milestones.indexOf("Reached Level 2!") !== -1, true);
   },
 });
