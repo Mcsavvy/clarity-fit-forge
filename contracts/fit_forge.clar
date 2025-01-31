@@ -4,6 +4,7 @@
 (define-constant contract-owner tx-sender)
 (define-constant err-not-found (err u404))
 (define-constant err-unauthorized (err u401))
+(define-constant err-already-exists (err u409))
 
 ;; Data Maps
 (define-map Users principal 
@@ -41,14 +42,17 @@
 (define-public (create-profile (goals (string-utf8 256)))
   (let
     ((user tx-sender))
-    (ok (map-set Users user {
-      goals: goals,
-      level: u1,
-      total-workouts: u0,
-      joined-at: block-height,
-      current-streak: u0,
-      last-workout: u0
-    }))
+    (if (is-some (map-get? Users user))
+      err-already-exists
+      (ok (map-set Users user {
+        goals: goals,
+        level: u1,
+        total-workouts: u0,
+        joined-at: block-height,
+        current-streak: u0,
+        last-workout: u0
+      }))
+    )
   )
 )
 
@@ -64,6 +68,7 @@
                       (is-eq (- block-height last-workout-height) u1))
                     (+ current-streak u1)
                     u1))
+      (new-level (calculate-new-level (+ (get total-workouts user-data) u1)))
     )
     (try! (map-set Workouts workout-id {
       user: tx-sender,
@@ -76,7 +81,8 @@
     (map-set Users tx-sender (merge user-data {
       total-workouts: (+ (get total-workouts user-data) u1),
       current-streak: new-streak,
-      last-workout: block-height
+      last-workout: block-height,
+      level: new-level
     }))
     (try! (check-achievements tx-sender))
     (ok workout-id)
@@ -91,11 +97,16 @@
 )
 
 ;; Private Functions
+(define-private (calculate-new-level (total-workouts uint))
+  (+ u1 (/ total-workouts u10))
+)
+
 (define-private (check-achievements (user principal))
   (let
     ((user-data (unwrap! (get-user-data user) err-not-found))
      (total-workouts (get total-workouts user-data))
-     (current-streak (get current-streak user-data)))
+     (current-streak (get current-streak user-data))
+     (level (get level user-data)))
     (match (get-achievements user)
       achievement-data (begin
         (if (and (is-eq (mod total-workouts u10) u0) 
@@ -105,6 +116,10 @@
         )
         (if (and (>= current-streak u7))
           (try! (add-achievement user "7 Day Streak Achievement!"))
+          (ok true)
+        )
+        (if (and (> level u1))
+          (try! (add-achievement user (concat "Reached Level " (to-string level) "!")))
           (ok true)
         ))
       err-not-found
