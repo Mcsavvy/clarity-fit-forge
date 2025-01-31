@@ -3,8 +3,9 @@
 ;; Constants
 (define-constant contract-owner tx-sender)
 (define-constant err-not-found (err u404))
-(define-constant err-unauthorized (err u401))
+(define-constant err-unauthorized (err u401)) 
 (define-constant err-already-exists (err u409))
+(define-constant max-streak-days u7)
 
 ;; Data Maps
 (define-map Users principal 
@@ -64,10 +65,10 @@
       (last-workout-height (get last-workout user-data))
       (current-streak (get current-streak user-data))
       (new-streak (if (is-eq last-workout-height u0)
-                    u1
-                    (if (<= (- block-height last-workout-height) u1)
-                      (+ current-streak u1)
-                      u1)))
+                  u1
+                  (if (< (- block-height last-workout-height) u2)
+                    (+ current-streak u1)
+                    u1)))
       (new-level (calculate-new-level (+ (get total-workouts user-data) u1)))
     )
     (try! (map-set Workouts workout-id {
@@ -114,7 +115,7 @@
           (try! (add-achievement user (concat "Completed " (to-string total-workouts) " workouts!")))
           (ok true)
         )
-        (if (and (>= current-streak u7))
+        (if (and (>= current-streak max-streak-days))
           (try! (add-achievement user "7 Day Streak Achievement!"))
           (ok true)
         )
