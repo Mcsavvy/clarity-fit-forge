@@ -24,9 +24,11 @@ A decentralized fitness platform that creates and manages personalized workout p
 - Added workout streak tracking functionality
 - New streak-based achievements system
 - Track consecutive daily workouts
-- Special achievement for 7-day workout streaks
+- Special achievement for 7-day workout streaks 
 - Added automatic level progression (1 level per 10 workouts)
 - Level-based achievements
 - Prevention of duplicate profile creation
 - Enhanced achievement system with level milestones
 - Fixed streak calculation logic to properly handle consecutive workouts
+- Added maximum streak constant and improved streak reset logic
+- Fixed streak calculation bug to only count one workout per day
