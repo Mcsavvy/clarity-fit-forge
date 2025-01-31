@@ -11,7 +11,9 @@
     goals: (string-utf8 256),
     level: uint,
     total-workouts: uint,
-    joined-at: uint
+    joined-at: uint,
+    current-streak: uint,
+    last-workout: uint
   }
 )
 
@@ -43,7 +45,9 @@
       goals: goals,
       level: u1,
       total-workouts: u0,
-      joined-at: block-height
+      joined-at: block-height,
+      current-streak: u0,
+      last-workout: u0
     }))
   )
 )
@@ -53,6 +57,13 @@
     (
       (workout-id (+ (var-get workout-counter) u1))
       (user-data (unwrap! (get-user-data tx-sender) err-not-found))
+      (last-workout-height (get last-workout user-data))
+      (current-streak (get current-streak user-data))
+      (new-streak (if (or 
+                      (is-eq last-workout-height u0)
+                      (is-eq (- block-height last-workout-height) u1))
+                    (+ current-streak u1)
+                    u1))
     )
     (try! (map-set Workouts workout-id {
       user: tx-sender,
@@ -63,7 +74,9 @@
     }))
     (var-set workout-counter workout-id)
     (map-set Users tx-sender (merge user-data {
-      total-workouts: (+ (get total-workouts user-data) u1)
+      total-workouts: (+ (get total-workouts user-data) u1),
+      current-streak: new-streak,
+      last-workout: block-height
     }))
     (try! (check-achievements tx-sender))
     (ok workout-id)
@@ -81,12 +94,17 @@
 (define-private (check-achievements (user principal))
   (let
     ((user-data (unwrap! (get-user-data user) err-not-found))
-     (total-workouts (get total-workouts user-data)))
+     (total-workouts (get total-workouts user-data))
+     (current-streak (get current-streak user-data)))
     (match (get-achievements user)
       achievement-data (begin
         (if (and (is-eq (mod total-workouts u10) u0) 
                  (> total-workouts u0))
           (try! (add-achievement user (concat "Completed " (to-string total-workouts) " workouts!")))
+          (ok true)
+        )
+        (if (and (>= current-streak u7))
+          (try! (add-achievement user "7 Day Streak Achievement!"))
           (ok true)
         ))
       err-not-found
