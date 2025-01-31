@@ -29,3 +29,4 @@ A decentralized fitness platform that creates and manages personalized workout p
 - Level-based achievements
 - Prevention of duplicate profile creation
 - Enhanced achievement system with level milestones
+- Fixed streak calculation logic to properly handle consecutive workouts

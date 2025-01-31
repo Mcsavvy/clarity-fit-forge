@@ -63,11 +63,11 @@
       (user-data (unwrap! (get-user-data tx-sender) err-not-found))
       (last-workout-height (get last-workout user-data))
       (current-streak (get current-streak user-data))
-      (new-streak (if (or 
-                      (is-eq last-workout-height u0)
-                      (is-eq (- block-height last-workout-height) u1))
-                    (+ current-streak u1)
-                    u1))
+      (new-streak (if (is-eq last-workout-height u0)
+                    u1
+                    (if (<= (- block-height last-workout-height) u1)
+                      (+ current-streak u1)
+                      u1)))
       (new-level (calculate-new-level (+ (get total-workouts user-data) u1)))
     )
     (try! (map-set Workouts workout-id {
